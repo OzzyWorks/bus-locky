@@ -12,7 +12,20 @@
 <script>
 const ROUTES={inage:{label:"① 稲毛駅 → 幸町団地循環",direction:"幸町団地循環",key:"inage_to_saiwai"},rotary:{label:"② 幸町ロータリー → 稲毛駅",direction:"JR稲毛駅行き",key:"rotary_to_inage"}};
 let data=null,route="inage";const $=id=>document.getElementById(id);
-function serviceType(d){const day=d.getDay();return day===0||day===6?"holiday":"weekday"}
+function dateKey(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function jpHolidays(year){
+ const set=new Set(),add=(m,d)=>set.add(dateKey(new Date(year,m-1,d))),nth=(m,n,w)=>{const first=new Date(year,m-1,1).getDay();return 1+((w-first+7)%7)+(n-1)*7};
+ [ [1,1],[2,11],[2,23],[4,29],[5,3],[5,4],[5,5],[8,11],[11,3],[11,23] ].forEach(x=>add(x[0],x[1]));
+ add(1,nth(1,2,1));add(7,nth(7,3,1));add(9,nth(9,3,1));add(10,nth(10,2,1));
+ const y=year-1980;add(3,Math.floor(20.8431+.242194*y-Math.floor(y/4)));add(9,Math.floor(23.2488+.242194*y-Math.floor(y/4)));
+ if(year===2020){set.delete(dateKey(new Date(year,6,20)));add(7,23);add(8,10)}
+ if(year===2021){set.delete(dateKey(new Date(year,6,19)));add(7,22);add(8,8)}
+ const base=[...set].map(s=>new Date(s+"T12:00:00"));
+ base.forEach(d=>{if(d.getDay()===0){let x=new Date(d);do{x.setDate(x.getDate()+1)}while(set.has(dateKey(x)));set.add(dateKey(x))}});
+ for(let m=1;m<=12;m++)for(let day=2;day<31;day++){const d=new Date(year,m-1,day);if(d.getMonth()!==m-1)continue;const prev=new Date(d);prev.setDate(day-1);const next=new Date(d);next.setDate(day+1);if(set.has(dateKey(prev))&&set.has(dateKey(next))&&d.getDay()!==0)set.add(dateKey(d))}
+ return set
+}
+function serviceType(d){const day=d.getDay();return day===0||day===6||jpHolidays(d.getFullYear()).has(dateKey(d))?"holiday":"weekday"}
 function fmtDate(d){return new Intl.DateTimeFormat("ja-JP",{year:"numeric",month:"long",day:"numeric",weekday:"short"}).format(d)}
 function parseTimes(date){const entry=data&&data.routes&&data.routes[ROUTES[route].key];if(!entry)return [];const type=serviceType(date);return (entry[type]||[]).map(t=>{const a=t.split(":").map(Number);return {h:a[0],m:a[1],label:t}}).sort((a,b)=>a.h*60+a.m-b.h*60-b.m)}
 function nextDepartures(now){const mins=now.getHours()*60+now.getMinutes()+now.getSeconds()/60;let out=[];for(let offset=0;offset<=2;offset++){const day=new Date(now);day.setDate(day.getDate()+offset);for(const t of parseTimes(day)){const total=t.h*60+t.m+offset*1440;if(total>mins+0.01){const d=new Date(now);d.setDate(d.getDate()+offset);d.setHours(t.h,t.m,0,0);out.push({time:t.label,date:d,minutes:Math.floor(total-mins)})}}if(out.length>=5)break}return out.slice(0,5)}
