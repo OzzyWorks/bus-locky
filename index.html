@@ -10,7 +10,7 @@
 <div class="actions"><button class="action" id="refresh">↻ 時刻表を更新</button><button class="action" id="switch">経路を切替</button></div>
 <div class="status" id="status">時刻表データを確認しています…</div><div class="notice" id="notice" hidden>時刻表データがまだ登録されていません。公式時刻表の自動取得が完了するまでお待ちください。</div></main>
 <script>
-const ROUTES={inage:{label:"① 稲毛駅 → 幸町団地循環",direction:"幸町団地循環",key:"inage_to_saiwai"},rotary:{label:"② 幸町ロータリー → 稲毛駅",direction:"JR稲毛駅行き",key:"rotary_to_inage"}};
+const ROUTES={inage:{label:"① 稲毛駅 → 幸町団地循環",direction:"幸町団地循環",key:"inage_to_saiwai"},rotary:{label:"② 幸町中央ロータリー → 稲毛駅",direction:"JR稲毛駅行き",key:"rotary_to_inage"}};
 let data=null,route="inage";const $=id=>document.getElementById(id);
 function dateKey(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function jpHolidays(year){
@@ -32,7 +32,7 @@ function nextDepartures(now){const mins=now.getHours()*60+now.getMinutes()+now.g
 function render(){const now=new Date();$("clock").textContent=now.toLocaleTimeString("ja-JP");$("today").textContent=fmtDate(now);$("serviceDay").textContent=serviceType(now)==="weekday"?"平日ダイヤ":"土曜・休日ダイヤ";$("routeName").textContent=ROUTES[route].label;$("direction").textContent=ROUTES[route].direction;const list=nextDepartures(now),entry=data&&data.routes&&data.routes[ROUTES[route].key];$("notice").hidden=!!(entry&&((entry.weekday&&entry.weekday.length)||(entry.holiday&&entry.holiday.length)));
 if(!list.length){$("count").textContent="--:--";$("departure").textContent="本日の運行は終了しました";$("remaining").textContent="";$("upcoming").innerHTML='<div class="item"><small>次の運行日をご確認ください</small></div>';return}
 const n=list[0],s=n.minutes,hh=Math.floor(s/60),mm=s%60,ss=59-now.getSeconds();$("count").textContent=hh?String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0"):String(mm).padStart(2,"0")+":"+String(ss).padStart(2,"0");$("departure").textContent=n.time+" 発";$("remaining").textContent=hh?"あと "+hh+"時間 "+mm+"分":"あと "+s+"分";$("upcoming").innerHTML=list.map((x,i)=>'<div class="item"><b>'+x.time+'</b><small>'+(i===0?"次発":"あと "+x.minutes+"分")+(x.date.getDate()!==now.getDate()?"（翌日）":"")+'</small></div>').join("")}
-async function load(force){$("status").textContent="時刻表データを確認しています…";try{const res=await fetch("./data/timetable.json"+(force?"?t="+Date.now():""),{cache:force?"no-store":"default"});if(!res.ok)throw Error("HTTP "+res.status);data=await res.json();$("status").textContent="時刻表更新日："+(data.updatedAt||"未確認")+" ／ 公式サイトを15分ごとに再確認";}catch(e){$("status").textContent="時刻表データを取得できません。通信状態を確認してください。"}render()}
+async function load(force){$("status").textContent="時刻表データを確認しています…";try{const res=await fetch("./data/timetable.json"+(force?"?t="+Date.now():""),{cache:force?"no-store":"default"});if(!res.ok)throw Error("HTTP "+res.status);data=await res.json();$("status").textContent="時刻表更新日："+(data.updatedAt||"未確認")+" ／ アプリ内データを15分ごとに再読込";}catch(e){$("status").textContent="時刻表データを取得できません。通信状態を確認してください。"}render()}
 function setRoute(v){route=v;document.querySelectorAll(".route").forEach(b=>b.classList.toggle("active",b.dataset.route===v));render()}
 document.querySelectorAll(".route").forEach(b=>b.addEventListener("click",()=>setRoute(b.dataset.route)));$("switch").onclick=()=>setRoute(route==="inage"?"rotary":"inage");$("refresh").onclick=()=>load(true);load(false);setInterval(render,1000);setInterval(()=>load(false),15*60*1000);
 </script></body></html>
