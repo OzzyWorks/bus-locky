@@ -1,0 +1,54 @@
+name: Check official timetable
+
+on:
+  schedule:
+    - cron: "0 12 * * *" # 21:00 JST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  check-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download official PDF
+        run: |
+          mkdir -p data/source
+          curl --fail --location --retry 3 \
+            "https://askabus.com/wp-content/themes/aska/pdf_bus/route_inage_timetable.pdf" \
+            -o data/source/route_inage_timetable.pdf
+          sha256sum data/source/route_inage_timetable.pdf > /tmp/current.sha
+
+      - name: Detect changes
+        id: diff
+        run: |
+          if [ ! -f data/source/route_inage_timetable.pdf ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif ! cmp -s data/source/route_inage_timetable.pdf <(git show HEAD:data/source/route_inage_timetable.pdf 2>/dev/null); then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit newly published PDF
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/source/route_inage_timetable.pdf
+          git commit -m "Update official timetable PDF" || exit 0
+          git push
+
+      - name: Open review issue when PDF changes
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "公式時刻表PDFの更新を検出しました" \
+            --body "公式PDFの更新を検出し、data/source/route_inage_timetable.pdf に保存しました。時刻表の差分を確認し、data/timetable.json を更新してください。\n\n公式PDF: https://askabus.com/wp-content/themes/aska/pdf_bus/route_inage_timetable.pdf"
