@@ -9,7 +9,8 @@
 
 ## 時刻表データ
 
-- `data/timetable.json` は公式PDFの「平日」「土休日」欄から停留所別に転記しています。
+- `data/timetable.json` は、ユーザー提供の2024年9月1日改正の停留所掲示写真を基準に、平日・土休日の全便を再転記しています。
+- ②幸町中央ロータリー発は、掲示の○印（幸町16街区止まり）を稲毛駅まで行かない便として除外しています。①稲毛駅発は1枚目の掲示どおり、○印の便も含めています。
 - 公式PDF: https://askabus.com/wp-content/themes/aska/pdf_bus/route_inage_timetable.pdf
 - GitHub Actions が毎日21:00（日本時間）に公式PDFを取得し、前回取得分と比較します。
 - PDFの更新を検出した場合はPDFを保存してIssueを作成します。時刻の読み違いを防ぐため、JSONへの反映は差分確認後に行います。
